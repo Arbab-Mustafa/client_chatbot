@@ -1,6 +1,5 @@
 import streamlit as st
 import os
-import tiktoken
 
 # Try to import dotenv, but don't fail if it's not available
 try:
