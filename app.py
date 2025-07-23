@@ -33,7 +33,7 @@ try:
     from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
     from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
     from langchain_community.embeddings import OpenAIEmbeddings
-    from langchain_community.vectorstores import Chroma
+    from langchain_community.vectorstores import FAISS
     from langchain_community.chat_models import ChatOpenAI
     from langchain_community.callbacks.manager import get_openai_callback
     from langchain.chains import LLMChain
@@ -95,8 +95,8 @@ def get_vectorstore(text_chunks):
     
     try:
         embeddings = OpenAIEmbeddings()
-        # Use ChromaDB instead of FAISS for lighter vector storage
-        vectorstore = Chroma.from_texts(texts=text_chunks, embedding=embeddings)
+        # Use FAISS instead of ChromaDB for better Streamlit Cloud compatibility
+        vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
         return vectorstore
     except Exception as e:
         st.error(f"Failed to create vector store: {e}")
