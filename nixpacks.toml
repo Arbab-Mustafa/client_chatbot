@@ -1,6 +1,6 @@
 [phases.setup]
 nixPkgs = ['python311', 'gcc', 'g++', 'cmake', 'libblas', 'liblapack']
-aptPkgs = ['build-essential', 'libblas-dev', 'liblapack-dev']
+aptPkgs = ['build-essential', 'libblas3', 'liblapack3']
 
 [phases.install]
 cmds = ['pip install --no-cache-dir -r requirements.txt']
