@@ -1,5 +1,16 @@
 import streamlit as st
-from dotenv import load_dotenv
+import os
+import tiktoken
+
+# Try to import dotenv, but don't fail if it's not available
+try:
+    from dotenv import load_dotenv
+    DOTENV_AVAILABLE = True
+except ImportError:
+    DOTENV_AVAILABLE = False
+    def load_dotenv():
+        pass  # No-op function if dotenv is not available
+
 from PyPDF2 import PdfReader
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
@@ -18,8 +29,7 @@ from langchain.prompts.chat import SystemMessagePromptTemplate
 from htmlTempletes import css, bot_template, user_template
 from questionmaker import NoOpLLMChain
 from prompts import general_prompt, general_citation, engagedlow_student_prompt, engagedchild_student_prompt
-import os
-import tiktoken
+
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -104,13 +114,16 @@ def handle_userinput(user_question):
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 def main():
     # Load environment variables - works for both local .env and Streamlit Cloud secrets
-    try:
-        load_dotenv()
-    except Exception as e:
-        st.warning(f"Could not load .env file: {e}")
+    if DOTENV_AVAILABLE:
+        try:
+            load_dotenv()
+        except Exception as e:
+            st.warning(f"Could not load .env file: {e}")
+    else:
+        st.info("Running without .env file - using Streamlit Cloud secrets")
     
     st.set_page_config(page_title="Chat with TX School Psych Chatbot",
-                    page_icon=":robot_face", layout="wide")
+                     page_icon=":robot_face", layout="wide")
     st.write(css, unsafe_allow_html=True)
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
