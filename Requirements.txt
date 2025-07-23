@@ -9,3 +9,4 @@ CTransformers
 streamlit
 langchain-community
 python-dotenv
+dotenv
