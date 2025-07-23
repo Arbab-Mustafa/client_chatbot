@@ -112,17 +112,17 @@ def handle_userinput(user_question):
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 def main():
-    # Load environment variables - works for both local .env and Streamlit Cloud secrets
+    # Load environment variables - works for local .env, Streamlit Cloud secrets, and Railway
     if DOTENV_AVAILABLE:
         try:
             load_dotenv()
         except Exception as e:
             st.warning(f"Could not load .env file: {e}")
     else:
-        st.info("Running without .env file - using Streamlit Cloud secrets")
+        st.info("Running without .env file - using platform environment variables")
     
     st.set_page_config(page_title="Chat with TX School Psych Chatbot",
-                     page_icon=":robot_face", layout="wide")
+                      page_icon=":robot_face", layout="wide")
     st.write(css, unsafe_allow_html=True)
     if "conversation" not in st.session_state:
         st.session_state.conversation = None
