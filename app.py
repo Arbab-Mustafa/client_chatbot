@@ -119,7 +119,12 @@ def handle_userinput(user_question):
 
 
 def main():
-    load_dotenv()
+    # Load environment variables - works for both local .env and Streamlit Cloud secrets
+    try:
+        load_dotenv()
+    except Exception as e:
+        st.warning(f"Could not load .env file: {e}")
+    
     st.set_page_config(page_title="Chat with TX School Psych Chatbot",
                        page_icon=":robot_face", layout="wide")
     st.write(css, unsafe_allow_html=True)
