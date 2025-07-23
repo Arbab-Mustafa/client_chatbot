@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ['python311', 'gcc', 'g++', 'cmake', 'libblas', 'liblapack']
+aptPkgs = ['build-essential', 'libblas-dev', 'liblapack-dev']
+
+[phases.install]
+cmds = ['pip install --no-cache-dir -r requirements.txt']
+
+[phases.build]
+cmds = ['pip install streamlit']
+
+[start]
+cmd = 'streamlit run app.py --server.port $PORT --server.address 0.0.0.0'

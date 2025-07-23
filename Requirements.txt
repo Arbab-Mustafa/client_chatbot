@@ -8,5 +8,5 @@ openai>=1.0.0
 faiss-cpu>=1.7.0
 sentence-transformers>=2.2.0
 huggingface_hub>=0.17.0
-torch>=2.0.0
+torch==2.0.1+cpu
 transformers>=4.30.0
