@@ -24,6 +24,12 @@ This guide covers deploying the Texas School Psychology Chatbot to Streamlit Clo
 - **After**: ChromaDB (lightweight, Python-native)
 - **Benefits**: Easier deployment, better Streamlit Cloud compatibility
 
+### 4. **Robust Error Handling**
+
+- **Added**: Try-catch blocks for all imports
+- **Added**: Graceful fallbacks for missing dependencies
+- **Added**: Better error messages for debugging
+
 ## Deployment Steps
 
 ### 1. **Environment Variables Setup**
@@ -42,10 +48,12 @@ Ensure your repository has:
 ├── app.py
 ├── requirements.txt
 ├── runtime.txt
+├── packages.txt
 ├── .streamlit/config.toml
 ├── htmlTempletes.py
 ├── prompts.py
 ├── questionmaker.py
+├── test_deployment.py
 └── images/
 ```
 
@@ -55,6 +63,15 @@ Ensure your repository has:
 2. Set main file path: `app.py`
 3. Add environment variables
 4. Deploy
+
+### 4. **Troubleshooting Deployment**
+
+If you encounter dependency issues:
+
+1. **Check the logs** in Streamlit Cloud dashboard
+2. **Run the test script** locally: `python test_deployment.py`
+3. **Verify requirements.txt** has all dependencies
+4. **Check Python version** compatibility (3.11+)
 
 ## Performance Expectations
 
@@ -75,40 +92,54 @@ Ensure your repository has:
 - ✅ Multiple response styles
 - ✅ Chat memory
 - ✅ Real-time responses
+- ✅ Robust error handling
 
-## Limitations
+## Common Deployment Issues
 
-### **Model Options**
+### **1. ModuleNotFoundError: No module named 'PyPDF2'**
 
-- Only OpenAI models available
-- No local/HuggingFace models
-- Requires OpenAI API key
+**Solution**: 
+- Ensure `requirements.txt` has `PyPDF2>=3.0.0`
+- Check that Streamlit Cloud is installing dependencies
+- Try using `>=` instead of `==` for version flexibility
 
-### **File Upload**
+### **2. LangChain Import Errors**
 
-- Limited to 200MB total
-- PDF files only
-- Processing time depends on file size
+**Solution**:
+- Verify `langchain>=0.1.0` and `langchain-community>=0.0.10` in requirements.txt
+- Check for version conflicts
+- Use the test script to verify imports
 
-## Troubleshooting
+### **3. Environment Variable Issues**
 
-### **Common Issues**
+**Solution**:
+- Set `OPENAI_API_KEY` in Streamlit Cloud secrets
+- Verify the key is valid and has credits
+- Check for typos in the environment variable name
 
-1. **"OpenAI API key not configured"**
+## Testing Your Deployment
 
-   - Check environment variables in Streamlit Cloud
-   - Ensure key is valid and has credits
+### **Local Testing**
 
-2. **"Failed to create vector store"**
+Run the test script before deploying:
 
-   - Verify OpenAI API key
-   - Check internet connectivity
+```bash
+python test_deployment.py
+```
 
-3. **Slow processing**
-   - Large PDF files take longer
-   - Consider splitting documents
+This will verify:
+- All dependencies can be imported
+- Local modules are accessible
+- Environment variables are set
 
-### **Performance Tips**
+### **Streamlit Cloud Testing**
+
+1. Upload a small PDF file
+2. Test the processing functionality
+3. Verify AI responses work
+4. Check error handling
+
+## Performance Tips
 
 1. **Optimize PDFs**: Compress large files before upload
 2. **Chunk Size**: Current 1000 chars is optimal for balance
@@ -143,3 +174,22 @@ For deployment issues:
 2. Verify environment variables
 3. Test with smaller PDF files first
 4. Monitor OpenAI API usage
+5. Run the test script locally
+6. Check the error handling in the app
+
+## Recent Fixes Applied
+
+### **Dependency Installation Issues**
+- Updated `requirements.txt` to use `>=` instead of `==`
+- Added `packages.txt` for system dependencies
+- Improved error handling in `app.py`
+
+### **Import Error Handling**
+- Added try-catch blocks for all imports
+- Graceful fallbacks for missing modules
+- Better error messages for debugging
+
+### **Deployment Robustness**
+- Added dependency availability checks
+- Improved error handling throughout the app
+- Added success/error feedback for users

@@ -1,0 +1,3 @@
+# System packages for PDF processing and scientific computing
+build-essential
+python3-dev 
