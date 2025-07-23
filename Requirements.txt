@@ -8,5 +8,4 @@ sentence_transformers
 CTransformers
 streamlit
 langchain-community
-dotenv
 python-dotenv
