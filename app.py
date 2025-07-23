@@ -10,6 +10,17 @@ except ImportError:
     def load_dotenv():
         pass  # No-op function if dotenv is not available
 
+# Load environment variables
+if DOTENV_AVAILABLE:
+    try:
+        load_dotenv()
+    except Exception as e:
+        st.warning(f"Could not load .env file: {e}")
+
+# Check for required API keys
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
+
 from PyPDF2 import PdfReader
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
@@ -55,16 +66,26 @@ def get_vectorstore(text_chunks):
 def get_conversation_chain(vectorstore, model, student_type):
     #create llm
     if model == 'OpenAI GPT 3.5': 
+        if not OPENAI_API_KEY:
+            st.error('OpenAI API key not configured', icon="🚨")
+            return None
         llm = ChatOpenAI(temperature=0)
     elif model == 'GPT-4o mini': 
+        if not OPENAI_API_KEY:
+            st.error('OpenAI API key not configured', icon="🚨")
+            return None
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     elif model == 'Google flan-t5-xxl':
+        if not HUGGINGFACE_API_KEY:
+            st.error('HuggingFace API key not configured', icon="🚨")
+            return None
         llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
-    elif model == 'Facebook LLAMA':
-        pass
-        #llm = CTransformers(model="llama-2-7b-chat.ggmlv3.q4_0.bin",model_type="llama",config={'max_new_tokens':128,'temperature':0.01})
+    elif model == 'Facebook LLAMA 7b':
+        st.error('LLAMA model not yet implemented - please select another model', icon="🚨")
+        return None
     else:
         st.error('Model name not valid', icon="🚨")
+        return None
     #create memory type
     memory = ConversationBufferMemory(memory_key='chat_history', output_key='answer', return_messages=True)
     #create conversation chain
@@ -91,9 +112,30 @@ def get_conversation_chain(vectorstore, model, student_type):
 
     return conv_rqa
 def select_model():
+    # Check API keys and filter available models
+    available_models = []
+    
+    if OPENAI_API_KEY:
+        available_models.extend(['GPT-4o mini', 'OpenAI GPT 3.5'])
+    else:
+        st.warning("⚠️ OpenAI API key not found. OpenAI models will not be available.")
+    
+    if HUGGINGFACE_API_KEY:
+        available_models.extend(['Google flan-t5-xxl'])
+    else:
+        st.warning("⚠️ HuggingFace API key not found. HuggingFace models will not be available.")
+    
+    # Always include LLAMA (local model)
+    available_models.append('Facebook LLAMA 7b')
+    
+    if not available_models:
+        st.error("❌ No API keys configured. Please set OPENAI_API_KEY or HUGGINGFACE_API_KEY environment variables.")
+        return None
+    
     model = st.selectbox(
-    'Select the model you want to use',
-    ('GPT-4o mini','OpenAI GPT 3.5', 'Google flan-t5-xxl', 'Facebook LLAMA 7b'))
+        'Select the model you want to use',
+        available_models
+    )
     return model
 def select_student_type():
     student_type = st.selectbox(
@@ -112,14 +154,7 @@ def handle_userinput(user_question):
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
 def main():
-    # Load environment variables - works for local .env, Streamlit Cloud secrets, and Railway
-    if DOTENV_AVAILABLE:
-        try:
-            load_dotenv()
-        except Exception as e:
-            st.warning(f"Could not load .env file: {e}")
-    else:
-        st.info("Running without .env file - using platform environment variables")
+    # Environment variables are already loaded at module level
     
     st.set_page_config(page_title="Chat with TX School Psych Chatbot",
                       page_icon=":robot_face", layout="wide")
@@ -137,6 +172,8 @@ def main():
     with st.sidebar:
         #select model
         model = select_model()
+        if model is None:
+            st.stop()
         #select student type
         student_type = select_student_type()
         st.subheader("Your documents")
@@ -156,7 +193,10 @@ def main():
                     # create vector store
                     vectorstore = get_vectorstore(text_chunks)
                     # create conversation chain
-                    st.session_state.conversation = get_conversation_chain(
-                        vectorstore, model, student_type)
+                    conversation = get_conversation_chain(vectorstore, model, student_type)
+                    if conversation:
+                        st.session_state.conversation = conversation
+                    else:
+                        st.error("Failed to create conversation chain. Please check your API keys and try again.")
 if __name__ == '__main__':
     main()
