@@ -1,9 +1,8 @@
 # Stage 1: Build dependencies
 FROM python:3.11-slim AS builder
 
-# Install only essential system dependencies
+# Install system dependencies in a single RUN to reduce layers
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     gcc \
     g++ \
     cmake \
@@ -21,16 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Stage 2: Final image
 FROM python:3.11-slim
 
-# Install runtime dependencies only (minimal set for running the app)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libblas3 \
-    liblapack3 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# Copy installed Python dependencies from builder stage
+# Copy installed Python dependencies from builder
 COPY --from=builder /usr/local/lib/python3.11 /usr/local/lib/python3.11
 COPY --from=builder /usr/local/bin /usr/local/bin
 
