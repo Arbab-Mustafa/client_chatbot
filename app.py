@@ -24,10 +24,13 @@ HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
 from PyPDF2 import PdfReader
 from langchain_community.document_loaders import PyPDFLoader, DirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter, CharacterTextSplitter
-from langchain_community.embeddings import OpenAIEmbeddings, HuggingFaceInstructEmbeddings, HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+# Use OpenAI embeddings instead of HuggingFace for lighter deployment
+from langchain_community.embeddings import OpenAIEmbeddings
+# Use ChromaDB instead of FAISS for lighter vector storage
+from langchain_community.vectorstores import Chroma
 from langchain_community.chat_models import ChatOpenAI
-from langchain_community.llms import HuggingFaceHub
+# Remove HuggingFaceHub import - use only OpenAI for production
+# from langchain_community.llms import HuggingFaceHub
 from langchain_community.callbacks.manager import get_openai_callback
 from langchain.chains import LLMChain
 from langchain.chains.question_answering import load_qa_chain
@@ -47,6 +50,7 @@ def get_pdf_text(pdf_docs):
         for page in pdf_reader.pages:
             text += page.extract_text()
     return text
+
 def get_text_chunks(text):
     text_splitter = CharacterTextSplitter(
         separator="\n",
@@ -56,15 +60,20 @@ def get_text_chunks(text):
     )
     chunks = text_splitter.split_text(text)
     return chunks
+
 def get_vectorstore(text_chunks):
-    #embeddings = OpenAIEmbeddings()
-    # embeddings = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
-    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2",
-                model_kwargs={'device':"cpu"})
-    vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+    # Use OpenAI embeddings instead of HuggingFace for lighter deployment
+    if not OPENAI_API_KEY:
+        st.error('OpenAI API key not configured for embeddings', icon="🚨")
+        return None
+    
+    embeddings = OpenAIEmbeddings()
+    # Use ChromaDB instead of FAISS for lighter vector storage
+    vectorstore = Chroma.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
+
 def get_conversation_chain(vectorstore, model, student_type):
-    #create llm
+    # Simplified model selection - use only OpenAI for production
     if model == 'OpenAI GPT 3.5': 
         if not OPENAI_API_KEY:
             st.error('OpenAI API key not configured', icon="🚨")
@@ -75,17 +84,10 @@ def get_conversation_chain(vectorstore, model, student_type):
             st.error('OpenAI API key not configured', icon="🚨")
             return None
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    elif model == 'Google flan-t5-xxl':
-        if not HUGGINGFACE_API_KEY:
-            st.error('HuggingFace API key not configured', icon="🚨")
-            return None
-        llm = HuggingFaceHub(repo_id="google/flan-t5-xxl", model_kwargs={"temperature":0.5, "max_length":512})
-    elif model == 'Facebook LLAMA 7b':
-        st.error('LLAMA model not yet implemented - please select another model', icon="🚨")
-        return None
     else:
-        st.error('Model name not valid', icon="🚨")
+        st.error('Only OpenAI models are supported in production deployment', icon="🚨")
         return None
+    
     #create memory type
     memory = ConversationBufferMemory(memory_key='chat_history', output_key='answer', return_messages=True)
     #create conversation chain
@@ -111,37 +113,27 @@ def get_conversation_chain(vectorstore, model, student_type):
     conv_rqa.combine_docs_chain.llm_chain.prompt.input_variables = ['context', 'question', 'chat_history']
 
     return conv_rqa
+
 def select_model():
-    # Check API keys and filter available models
-    available_models = []
-    
-    if OPENAI_API_KEY:
-        available_models.extend(['GPT-4o mini', 'OpenAI GPT 3.5'])
-    else:
-        st.warning("⚠️ OpenAI API key not found. OpenAI models will not be available.")
-    
-    if HUGGINGFACE_API_KEY:
-        available_models.extend(['Google flan-t5-xxl'])
-    else:
-        st.warning("⚠️ HuggingFace API key not found. HuggingFace models will not be available.")
-    
-    # Always include LLAMA (local model)
-    available_models.append('Facebook LLAMA 7b')
-    
-    if not available_models:
-        st.error("❌ No API keys configured. Please set OPENAI_API_KEY or HUGGINGFACE_API_KEY environment variables.")
+    # Simplified model selection for production - only OpenAI models
+    if not OPENAI_API_KEY:
+        st.error("❌ OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.")
         return None
+    
+    available_models = ['GPT-4o mini', 'OpenAI GPT 3.5']
     
     model = st.selectbox(
         'Select the model you want to use',
         available_models
     )
     return model
+
 def select_student_type():
     student_type = st.selectbox(
     'Select the type of question you would like to ask',
     ('General', 'General with citation', 'Engaged Low', 'Engaged Child'))
     return student_type
+
 def handle_userinput(user_question):
     
     response = st.session_state.conversation({'question': user_question})
@@ -153,6 +145,7 @@ def handle_userinput(user_question):
         else:
             st.write(bot_template.replace(
                 "{{MSG}}", message.content), unsafe_allow_html=True)
+
 def main():
     # Environment variables are already loaded at module level
     
@@ -192,11 +185,15 @@ def main():
                     text_chunks = get_text_chunks(raw_text)
                     # create vector store
                     vectorstore = get_vectorstore(text_chunks)
+                    if vectorstore is None:
+                        st.error("Failed to create vector store. Please check your OpenAI API key.")
+                        st.stop()
                     # create conversation chain
                     conversation = get_conversation_chain(vectorstore, model, student_type)
                     if conversation:
                         st.session_state.conversation = conversation
                     else:
                         st.error("Failed to create conversation chain. Please check your API keys and try again.")
+
 if __name__ == '__main__':
     main()
